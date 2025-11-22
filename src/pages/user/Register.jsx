@@ -1,5 +1,3 @@
-import '@styles/register.css';
-
 import { NavLink } from 'react-router-dom';
 
 const Register = () => {
