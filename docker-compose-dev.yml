@@ -33,4 +33,4 @@ services:
       - .env.dev
     ports:
       - ${BACK_PORT}:${BACK_PORT}
-    command: bash -c "bash init.sh dev"
+    command: bash -c "npm i && bash init.sh dev"
