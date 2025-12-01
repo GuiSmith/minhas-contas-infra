@@ -22,15 +22,13 @@ const Login = () => {
 
             setIsLoading(true);
 
-            const response = await fetch(completeUrl, apiOptions('POST',data));
-
+            const response = await fetch(completeUrl, apiOptions('POST', data));
             const responseData = await response.json();
-            
-            setIsLoading(false);
 
-            if(response.ok){
+            if (response.ok) {
                 toast.success('Login realizado com sucesso!');
-            }else{
+                navigate('/');
+            } else {
                 toast.warning(responseData.message);
             }
         } catch (error) {
@@ -54,12 +52,12 @@ const Login = () => {
                 {/* E-mail */}
                 <div className="mb-4">
                     <label htmlFor="email" className="form-label ms-2 fw-bold">E-mail</label>
-                    <input type="email" className="form-control shadow-sm" id="email" name="email" placeholder="email@gmail.com.br" { ...register("email") } autoFocus required />
+                    <input type="email" className="form-control shadow-sm" id="email" name="email" placeholder="email@gmail.com.br" {...register("email")} autoFocus required />
                 </div>
                 {/* Senha */}
                 <div className="mb-4">
                     <label htmlFor="password" className="form-label ms-2 fw-bold">Senha</label>
-                    <input type="password" className="form-control shadow-sm" id="password" name="password" placeholder='Digite sua senha...' { ...register("password") } required />
+                    <input type="password" className="form-control shadow-sm" id="password" name="password" placeholder='Digite sua senha...' {...register("password")} required />
                 </div>
                 {/* Botão de Criar conta */}
                 <div>

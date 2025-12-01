@@ -1,7 +1,13 @@
 
+// Bibliotecas
 import { NavLink } from 'react-router-dom';
 
+// Contextos
+import { useAuth } from '@contexts/AuthContext';
+
 const NavBar = () => {
+
+    const { isAuthenticated, authLoading, logout } = useAuth();
 
     const Item = (key, to, text) => {
         return (
@@ -28,6 +34,25 @@ const NavBar = () => {
         },
     ];
 
+    const renderAuthLinks = () => {
+        if (authLoading === true) {
+            return (<span>...</span>);
+        }
+
+        if (isAuthenticated) {
+            return (
+                <>{Item('logout', '/logout', 'Sair')}</>
+            )
+        } else {
+            return (
+                <>
+                    {Item('cadastro', '/register', 'Registrar-se')}
+                    {Item('login', '/login', 'Entrar')}
+                </>
+            )
+        }
+    }
+
     return (
         <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
             <div className="container-fluid">
@@ -41,8 +66,7 @@ const NavBar = () => {
                         {links.map((link, index) => Item(index, link.to, link.text))}
                     </ul>
                     <ul className="navbar-nav ms-auto">
-                        {Item('cadastro', '/register', 'Registrar-se')}
-                        {Item('login', '/login', 'Entrar')}
+                        {renderAuthLinks()}
                     </ul>
                 </div>
             </div>

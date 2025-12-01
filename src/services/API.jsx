@@ -8,7 +8,7 @@ const apiOptions = (method, body = null) => {
         'Content-Type': 'application/json',
     };
     obj.credentials = 'include';
-    if(!null){
+    if(body !== null){
         obj.body = JSON.stringify(body)
     }
 
