@@ -21,8 +21,8 @@ const NavBar = () => {
 
     const links = [
         {
-            to: '/home',
-            text: 'Home',
+            to: '/bill/form',
+            text: 'Nova Conta',
         },
         {
             to: '/bills',
