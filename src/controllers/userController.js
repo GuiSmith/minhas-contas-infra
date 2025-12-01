@@ -77,11 +77,19 @@ const login = async (req, res) => {
 
         const token = await tokenModel.create({ id_user: user.id });
 
-        if (!token){
+        if (!token) {
             return res.status(500).json({ message: "Erro ao gerar token. Contate o suporte!" });
         }
 
-        return res.status(200).json({ token: token.token });
+        res.cookie('session', token.token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+            path: "/",
+            maxAge: 1000 * 60 * 60 * 8 // 8h, por exemplo
+        })
+
+        return res.status(200).json({ message: `Login realizado com sucesso!` });
 
     } catch (error) {
         console.log(error);
