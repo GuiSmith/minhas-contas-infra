@@ -1,19 +1,24 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+// Form
 import { useForm } from 'react-hook-form';
-import { ToastContainer, toast } from 'react-toastify';
 import { useState } from 'react';
 
 // Services
 import { apiUrl, apiOptions } from '@services/API';
 
+// Contextos
+import { useAuth } from '@contexts/AuthContext';
+
 // Components or UI
 import Loading from '@components/Loading';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 
 const Login = () => {
 
     const { register, handleSubmit } = useForm();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const { checkSession } = useAuth();
 
     const onSubmit = async (data) => {
         try {
@@ -27,6 +32,7 @@ const Login = () => {
 
             if (response.ok) {
                 toast.success('Login realizado com sucesso!');
+                await checkSession();
                 navigate('/');
             } else {
                 toast.warning(responseData.message);
