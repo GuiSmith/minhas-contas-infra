@@ -7,7 +7,7 @@
     box-shadow: 0 .125rem .25rem rgba(0, 0, 0, 0.075);
 }
 
-input.form-control, select.form-control {
+input.form-control, select.form-select {
     width: 15em;
 }
 
