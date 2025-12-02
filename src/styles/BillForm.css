@@ -7,6 +7,10 @@
     box-shadow: 0 .125rem .25rem rgba(0, 0, 0, 0.075);
 }
 
+input.form-control, select.form-control {
+    width: 15em;
+}
+
 .form-check-label, .form-check-input, .form-control[type=date], select.form-control {
     cursor: pointer;
 }

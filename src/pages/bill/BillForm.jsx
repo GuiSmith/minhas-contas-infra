@@ -3,76 +3,106 @@ import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 
 // UI
-import '@styles/form.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { NavLink } from 'react-router-dom';
 
+// Personalized UI
+import ToastConfirm from '@ui/ToastConfirm';
+import Loading from '@components/Loading';
+
+// Styles
+import '@styles/BillForm.css';
 
 const BillForm = () => {
 
     const { register, handleSubmit, watch } = useForm();
     const [isLoading, setIsLoading] = useState(false);
+    const [isWaitingResponse, setIsWaitingResponse] = useState(false);
 
     const onSubmit = async (data) => {
         try {
+            if (isWaitingResponse === true) {
+                toast.warning('Responda antes de continuar!');
+                return;
+            }
             // Validations
             setIsLoading(true);
 
-            console.log(data);
+            console.log('Inicial: ', data);
 
             // Category can't be empty
-            if(!(data.id_category > 0)){
+            if (!(data.id_categoria > 0)) {
                 toast.warning('Preencha uma categoria!');
                 return;
             }
 
             // Value can't be negative or empty
-            if(!(data.value > 0)){
+            if (!(data.valor > 0)) {
                 toast.warning('Valor precisa ser maior que 0!');
                 return;
             }
 
             // Due date can't be empty
-            if(!data.due_date){
+            if (!data.data_vencimento) {
                 toast.warning('Preencha data de vencimento!');
                 return;
             }
 
             // Surcharge can't be negative
-            if(data.surcharge < 0){
+            if (data.acrescimo < 0) {
                 toast.warning('Acréscimos não podem ser negativos!');
                 return;
             }
 
             // Discounts can't be negative
-            if(data.discount < 0){
+            if (data.desconto < 0) {
                 toast.warning('Descontos não podem ser negativos!');
                 return;
             }
 
             // If status is canceled, a cancel date should be specified
-            if(data.status == 'C' && !data.cancel_date){
-                toast.warning('Preencha a data de cancelamento!');
-                return;
+            if (data.status == 'C') {
+                if (!data.data_cancelamento) {
+                    toast.warning('Preencha a data de cancelamento!');
+                    return;
+                }
+            } else {
+                data.data_cancelamento = '';
             }
 
             // If status is paid, a payment date should be specified
-            if(data.status == 'P' && !data.payment_date){
-                toast.warning('Preencha a data de pagamento!');
-                return;
+            if (data.status == 'P') {
+                if (!data.data_pagamento) {
+                    toast.warning('Preencha a data de pagamento!');
+                    return;
+                }
+            } else {
+                data.data_pagamento = '';
             }
 
-            // If status is scheduled, a scheduled date should be specified
-            if(data.status == 'S' && !data.scheduled_date){
-                toast.warning('Preencha a data de agendamento!');
-                return;
+            // Ask if status should be updated on scheduled date
+            if (['P', 'C'].includes(data.status)) {
+
+                setIsWaitingResponse(true);
+                await ToastConfirm({
+                    question: 'Atualizar status na data agendada?',
+                    onConfirm: () => {
+                        data.atualizar_status_na_data = true;
+                    },
+                    onCancel: () => {
+                        data.atualizar_status_na_data = false;
+                    }
+                });
+                setIsWaitingResponse(false);
             }
+
+            console.log('Final: ', data);
 
             toast.success('OK!');
         } catch (error) {
             toast.error('Erro ao salvar conta. Contate o suporte!');
             console.log('Erro ao salvar conta');
-            console.error(error);
+            console.debug(error);
         } finally {
             setIsLoading(false);
         }
@@ -94,45 +124,63 @@ const BillForm = () => {
                 {/* Botões */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     <NavLink to='/bill/form' className={'btn btn-primary'} >Novo</NavLink>
-                    <button type='submit' className='btn btn-success'>Salvar</button>
-                    <NavLink to='/bills' className={'btn btn-dark'} >Listar</NavLink>
-                    <button type='button' className='btn btn-danger' onClick={handleDelete}>Deletar</button>
+                    <button type='submit' disabled={isWaitingResponse || isLoading} className='btn btn-success'>Salvar</button>
+                    <NavLink to='/bill/list' className={'btn btn-dark'} >Listar</NavLink>
+                    <button type='button' disabled={isWaitingResponse || isLoading} className='btn btn-danger' onClick={handleDelete}>Deletar</button>
                 </div>
                 {/* Descrição e Categoria */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     {/* Descrição */}
                     <div className='mb-3'>
-                        <label htmlFor="description" className='form-label'>Descrição</label>
-                        <input type="text" className='form-control' id='description' {...register('description')} placeholder='Conta de Energia' />
+                        <label htmlFor="descricao" className='form-label'>Descrição</label>
+                        <input type="text" className='form-control ' id='descricao' {...register('descricao')} placeholder='Conta de Energia' />
                     </div>
                     {/* Categoria */}
                     <div className='mb-3'>
-                        <label htmlFor="id-category" className='form-label'>Categoria</label>
-                        <select id="id-category" className='form-control' {...register('id_category')} >
+                        <label htmlFor="id-categoria" className='form-label'>Categoria</label>
+                        <select id="id-categoria" className='form-control' {...register('id_categoria')} >
                             <option value="0">Escolha uma categoria</option>
                             <option value="1">Teste</option>
                         </select>
                     </div>
                 </div>
-                {/* Valor e Data de vencimento */}
+                {/* Valor e Forma de pagamento */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     {/* Valor */}
                     <div className='mb-3'>
-                        <label htmlFor="value" className='form-label'>Valor</label>
-                        <input type="number" step='0.01' min='0' className='form-control' id='value' {...register('value')} placeholder='R$ 0,00' />
+                        <label htmlFor="valor" className='form-label'>Valor</label>
+                        <input type="tel" step='0.01' min='0' className='form-control' id='valor' {...register('valor')} placeholder='R$ 0,00' />
                     </div>
-                    {/* Data de vencimento */}
+                    {/* Forma de pagamento */}
                     <div className='mb-3'>
-                        <label htmlFor="due-date" className='form-label'>Data de vencimento</label>
-                        <input type="date" className='form-control' id='due-date' {...register('due_date')} />
+                        <label htmlFor="forma-pagamento" className='form-label'>Forma de pagamento</label>
+                        <select id="forma-pagamento" className='form-control' {...register('forma_pagamento')}>
+                            <option value="P">Pix</option>
+                            <option value="B">Boleto</option>
+                            <option value="D">Dinheiro</option>
+                            <option value="T">Transferência</option>
+                        </select>
                     </div>
                 </div>
-                {/* Recorrência, Status e Forma de pagamento */}
+                {/* Acréscimos e descontos */}
+                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
+                    {/* Acréscimos */}
+                    <div className='mb-3'>
+                        <label htmlFor="acrescimo" className='form-label'>Acréscimo</label>
+                        <input type="tel" className='form-control' id='acrescimo' placeholder='R$ 0,00' {...register('acrescimo')} />
+                    </div>
+                    {/* Desconto */}
+                    <div className='mb-3'>
+                        <label htmlFor="desconto" className='form-label'>Desconto</label>
+                        <input type="number" className='form-control' id='desconto' placeholder='R$ 0,00' {...register('desconto')} />
+                    </div>
+                </div>
+                {/* Recorrência e Status */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     {/* Recorrência */}
                     <div className='mb-3'>
-                        <label htmlFor="recurrence" className='form-label'>Recorrência</label>
-                        <select id='recurrence' className='form-control' {...register('recurrence')} >
+                        <label htmlFor="recorrencia" className='form-label'>Recorrência</label>
+                        <select id='recorrencia' className='form-control' {...register('recorrencia')} >
                             <option value="U">Única</option>
                             <option value="M">Mensal</option>
                             <option value="A">Anual</option>
@@ -142,51 +190,28 @@ const BillForm = () => {
                     <div className='mb-3'>
                         <label htmlFor="status" className='form-label'>Status</label>
                         <select id='status' className='form-control' {...register('status')} >
-                            <option value="D">Aberto</option>
+                            <option value="A">Aberto</option>
                             <option value="P">Pago</option>
-                            <option value="S">Agendado</option>
                             <option value="C">Cancelado</option>
-                        </select>
-                    </div>
-                    {/* Forma de pagamento */}
-                    <div className='mb-3'>
-                        <label htmlFor="payment-method" className='form-label'>Forma de pagamento</label>
-                        <select id="payment-method" className='form-control' {...register('payment_method')}>
-                            <option value="P">Pix</option>
-                            <option value="T">Transferência</option>
-                            <option value="B">Boleto</option>
                         </select>
                     </div>
                 </div>
                 {/* Datas de pagamento, cancelamento e agendamento */}
-                <div>
+                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
+                    {/* Data de vencimento */}
+                    <div className='mb-3'>
+                        <label htmlFor="data-vencimento" className='form-label'>Data de vencimento</label>
+                        <input type="date" className='form-control' id='data-vencimento' {...register('data_vencimento')} />
+                    </div>
                     {/* Data de pagamento */}
                     <div className='mb-3' style={{ display: `${watch('status') == 'P' ? 'block' : 'none'}` }}>
-                        <label htmlFor="payment-date" className='form-label'>Data de Pagamento</label>
-                        <input type="date" className='form-control' id='payment-date' {...register('payment_date')} />
+                        <label htmlFor="data-pagamento" className='form-label'>Data de Pagamento</label>
+                        <input type="date" className='form-control' id='data-pagamento' {...register('data_pagamento')} />
                     </div>
                     {/* Data de cancelamento */}
                     <div className='mb-3' style={{ display: `${watch('status') == 'C' ? 'block' : 'none'}` }}>
-                        <label htmlFor="cancel-date" className='form-label'>Data de Cancelamento</label>
-                        <input type="date" className='form-control' id='cancel-date' {...register('cancel_date')} />
-                    </div>
-                    {/* Data de agendamento */}
-                    <div className='mb-3' style={{ display: `${watch('status') == 'S' ? 'block' : 'none'}` }}>
-                        <label htmlFor="scheduled-date" className='form-label'>Data de Agendamento</label>
-                        <input type="date" className='form-control' id='scheduled-date' {...register('scheduled_date')} />
-                    </div>
-                </div>
-                {/* Acréscimos e Descontos */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    {/* Acréscimos */}
-                    <div className='mb-3'>
-                        <label htmlFor="surcharge" className='form-label'>Acréscimo</label>
-                        <input type="number" className='form-control' id='surcharge' placeholder='R$ 0,00' {...register('surcharge')} />
-                    </div>
-                    {/* Desconto */}
-                    <div className='mb-3'>
-                        <label htmlFor="discount" className='form-label'>Desconto</label>
-                        <input type="number" className='form-control' id='discount' placeholder='R$ 0,00' {...register('discount')} />
+                        <label htmlFor="data-cancelamento" className='form-label'>Data de Cancelamento</label>
+                        <input type="date" className='form-control' id='data-cancelamento' {...register('data_cancelamento')} />
                     </div>
                 </div>
                 {/* Observações */}
@@ -196,6 +221,7 @@ const BillForm = () => {
                 </div>
             </form>
             <ToastContainer position='bottom-right' />
+            {isLoading ? <Loading /> : <></>}
         </article>
     )
 };
