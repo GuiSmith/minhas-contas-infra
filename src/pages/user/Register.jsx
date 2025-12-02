@@ -5,7 +5,10 @@ import { useState } from 'react';
 // UI
 import { ToastContainer, toast } from 'react-toastify';
 import { NavLink, useNavigate } from 'react-router-dom';
+
+// Personalized UI
 import Loading from '@components/Loading';
+import '@styles/form.css';
 
 // Services
 import { apiUrl, apiOptions } from '@services/API';

@@ -9,9 +9,14 @@ import { apiUrl, apiOptions } from '@services/API';
 import { useAuth } from '@contexts/AuthContext';
 
 // Components or UI
-import Loading from '@components/Loading';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
+
+// Personalized UI
+import Loading from '@components/Loading';
+
+// Styles
+import '@styles/form.css';
 
 const Login = () => {
 

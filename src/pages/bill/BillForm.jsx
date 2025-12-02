@@ -11,7 +11,7 @@ import ToastConfirm from '@ui/ToastConfirm';
 import Loading from '@components/Loading';
 
 // Styles
-import '@styles/BillForm.css';
+import '@styles/form.css';
 
 const BillForm = () => {
 
