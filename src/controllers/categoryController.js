@@ -42,21 +42,26 @@ const list = async (req, res) => {
 const create = async (req, res) => {
     try {
 
-        const { descricao, id_user, id_categoria } = req.body ?? {};
+        const dadosObrigatorios = ['descricao'];
+
+        const data = req.body ?? {};
+
+        for (const dadoObrigatorio of dadosObrigatorios) {
+            if(!data[dadoObrigatorio]){
+                return res.status(400).json({ message: "Informe pelo menos a descrição" });
+            }
+        }
 
         // Descrição
-        if (descricao.length == 0 || descricao == '') {
-            return res.status(400).json({ message: 'Descrição vazia ou inválida' });
+        if (typeof data.descricao !== 'string' || data.descricao.trim().length == 0 || data.descricao == '') {
+            return res.status(400).json({ message: 'Descrição deve ser texto e não vazia' });
         }
 
-        // Usuário
-        const user = UserModel.findByPk(id_user);
-        if (!user) {
-            return res.status(400).json({ message: `Usuário de ID ${id_user} não encontrado` });
-        }
+        // Define o usuário da descrição como o da requisição
+        data.id_user = req.user.id;
 
         // Categoria
-        const category = await CategoryModel.findByPk(id_categoria);
+        const category = await CategoryModel.findByPk(data.id_categoria);
         if (category) {
             const recursiveOk = await recursiveCheckCategory(category.id, category.id_categoria);
             if (!recursiveOk) {
@@ -64,7 +69,7 @@ const create = async (req, res) => {
             }
         }
 
-        const createdCategory = await CategoryModel.create({descricao, id_user, id_categoria });
+        const createdCategory = await CategoryModel.create(data);
         return res.status(201).json(createdCategory);
     } catch (error) {
         console.log('Erro ao listar categorias');
