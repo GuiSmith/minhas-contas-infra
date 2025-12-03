@@ -19,6 +19,7 @@ const routes = [
     { path: '/bill/form/:id', element: <BillForm /> },
     // Category
     { path: 'category/form', element: <CategoryForm /> },
+    { path: 'category/form/:id', element: <CategoryForm /> },
 ];
 
 export default routes;

@@ -1,10 +1,10 @@
 // Libraries
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // UI
 import { ToastContainer, toast } from 'react-toastify';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useParams } from 'react-router-dom';
 
 // Personalized UI
 import Loading from '@components/Loading';
@@ -18,6 +18,18 @@ const CategoryForm = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isWaitingResponse, setIsWaitingResponse] = useState(false);
 
+    const [category,setCategory] = useState({});
+
+    const location = useLocation();
+    const params = useParams();
+
+    useEffect(() => {
+        if(!params.hasOwnProperty('id')){
+            return;
+        }
+        // Buscar categoria
+    },[location.pathname]);
+
     const onSubmit = async (data) => {
         console.log(data);
 
@@ -28,7 +40,7 @@ const CategoryForm = () => {
                 return;
             }
 
-            toast.success('OK');
+            // 
 
         } catch (error) {
             toast.error('Erro desconhecido. Contate o suporte!');
