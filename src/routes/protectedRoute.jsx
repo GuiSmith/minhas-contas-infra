@@ -9,8 +9,6 @@ const ProtectedRoute = ({ element, auth }) => {
         return element;
     }
 
-    console.log(element.type.name, auth, isAuthenticated);
-
     if(auth === true && isAuthenticated === false){
         return <Navigate to="/login" replace state={{ from: location.pathname }} />
     }
