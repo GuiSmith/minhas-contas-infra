@@ -10,6 +10,12 @@ import BillForm from '@pages/bill/BillForm';
 import CategoryForm from '@pages/category/CategoryForm';
 
 const routes = [
+    // Geral
+    {
+        path: '/',
+        auth: null,
+        element: <h1>Em dev</h1>
+    },
     // Users
     {
         path: '/register',
