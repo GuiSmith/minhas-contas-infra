@@ -1,10 +1,13 @@
 // Libraries
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // UI
 import { ToastContainer, toast } from 'react-toastify';
 import { NavLink } from 'react-router-dom';
+
+// Services
+import { apiUrl, apiOptions } from '@services/API';
 
 // Personalized UI
 import ToastConfirm from '@ui/ToastConfirm';
@@ -18,70 +21,99 @@ const BillForm = () => {
     const { register, handleSubmit, watch } = useForm();
     const [isLoading, setIsLoading] = useState(false);
     const [isWaitingResponse, setIsWaitingResponse] = useState(false);
+    const [categories, setCategories] = useState([]);
 
-    const onSubmit = async (data) => {
-        try {
-            if (isWaitingResponse === true) {
-                toast.warning('Responda antes de continuar!');
-                return;
+    // Listar categorias
+    useEffect(() => {
+        const getCategories = async () => {
+            try {
+                setIsLoading(true);
+
+                const res = await fetch(`${apiUrl}category/list`, apiOptions('GET'));
+                const resData = await res.json();
+
+                if (!res.ok) {
+                    toast.warning(resData.message);
+                    console.log('Erro ao listar categorias');
+                    console.error(resData);
+                    return;
+                }
+
+                if (resData.length === 0) {
+                    toast.warning('Nenhuma categoria cadastrada. Cadastre uma categoria antes de continuar!');
+                    setCategories([]);
+                    return;
+                }
+
+                setCategories(resData);
+            } catch (error) {
+                toast.error('Erro ao listar categorias. Contate o suporte!');
+                console.log('Erro ao listar categorias');
+                console.error(error);
+            } finally {
+                setIsLoading(false);
             }
-            // Validations
-            setIsLoading(true);
+        };
+        getCategories();
+    }, []);
 
+    // Validações
+    const validations = async (data) => {
+        try {
             console.log('Inicial: ', data);
 
-            // Category can't be empty
+            // Categoria não pode estar vazia
             if (!(data.id_categoria > 0)) {
                 toast.warning('Preencha uma categoria!');
-                return;
+                return false;
             }
 
-            // Value can't be negative or empty
+            // Valor não pode ser negativo ou vazio
             if (!(data.valor > 0)) {
                 toast.warning('Valor precisa ser maior que 0!');
-                return;
+                return false;
             }
 
-            // Due date can't be empty
+            // Data de vencimento não pode estar vazia
             if (!data.data_vencimento) {
                 toast.warning('Preencha data de vencimento!');
-                return;
+                return false;
             }
 
-            // Surcharge can't be negative
+            // Acréscimos não podem ser negativos
             if (data.acrescimo < 0) {
                 toast.warning('Acréscimos não podem ser negativos!');
-                return;
+                return false;
             }
 
-            // Discounts can't be negative
+            // Descontos não podem ser negativos
             if (data.desconto < 0) {
                 toast.warning('Descontos não podem ser negativos!');
-                return;
+                return false;
             }
 
-            // If status is canceled, a cancel date should be specified
+            // Se status for cancelado, uma data de cancelamento deve ser especificada
             if (data.status == 'C') {
                 if (!data.data_cancelamento) {
                     toast.warning('Preencha a data de cancelamento!');
-                    return;
+                    return false;
                 }
             } else {
                 data.data_cancelamento = '';
             }
 
-            // If status is paid, a payment date should be specified
+            // Se status for pago, uma data de pagamento deve ser especificada
             if (data.status == 'P') {
                 if (!data.data_pagamento) {
                     toast.warning('Preencha a data de pagamento!');
-                    return;
+                    return false;
                 }
             } else {
                 data.data_pagamento = '';
             }
 
-            // Ask if status should be updated on scheduled date
-            if (['P', 'C'].includes(data.status)) {
+            // Perguntar se status deve ser atualizado na data agendada
+            if (['P','T'].includes(data.forma_pagamento)) {
 
                 setIsWaitingResponse(true);
                 await ToastConfirm({
@@ -97,12 +129,34 @@ const BillForm = () => {
             }
 
             console.log('Final: ', data);
+            return true;
+        } catch (error) {
+            toast.error('Erro ao realizar validações. Contate o suporte!');
+            console.log('Erro ao realizar validações');
+            console.error(error);
+            return false;
+        }
+    };
+
+    const onSubmit = async (data) => {
+        try {
+            if (isWaitingResponse === true) {
+                toast.warning('Responda antes de continuar!');
+                return;
+            }
+
+            setIsLoading(true);
+
+            const isValid = await validations(data);
+            if (!isValid) {
+                return;
+            }
 
             toast.success('OK!');
         } catch (error) {
             toast.error('Erro ao salvar conta. Contate o suporte!');
             console.log('Erro ao salvar conta');
-            console.debug(error);
+            console.error(error);
         } finally {
             setIsLoading(false);
         }
@@ -138,9 +192,11 @@ const BillForm = () => {
                     {/* Categoria */}
                     <div className='mb-3'>
                         <label htmlFor="id-categoria" className='form-label'>Categoria</label>
-                        <select id="id-categoria" className='form-select' {...register('id_categoria')} >
-                            <option value="0">Escolha uma categoria</option>
-                            <option value="1">Teste</option>
+                        <select id="id-categoria" className='form-select' {...register('id_categoria')} disabled={categories.length == 0}>
+                            <option value="" >{categories.length === 0 ? 'Nenhuma categoria cadastrada' : 'Escolha uma categoria'}</option>
+                            {categories.length > 0 && categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>{cat.descricao_visual}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -175,7 +231,7 @@ const BillForm = () => {
                         <input type="number" className='form-control' id='desconto' placeholder='R$ 0,00' {...register('desconto')} />
                     </div>
                 </div>
-                {/* Recorrência e Status */}
+                {/* Recorrência e data de vencimento */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     {/* Recorrência */}
                     <div className='mb-3'>
@@ -186,6 +242,27 @@ const BillForm = () => {
                             <option value="A">Anual</option>
                         </select>
                     </div>
+                    {/* Data de vencimento */}
+                    <div className='mb-3'>
+                        <label htmlFor="data-vencimento" className='form-label'>Data de vencimento</label>
+                        <input type="date" className='form-control' id='data-vencimento' {...register('data_vencimento')} />
+                    </div>
+                </div>
+                {/* Data inicial e fim da recorrência */}
+                <div className={`'mb-3 ${watch('recorrencia') === 'U' ? 'd-none' : 'd-flex flex-wrap'} justify-content-start gap-3`}>
+                    {/* Data inicial */}
+                    <div className='mb-3'>
+                        <label htmlFor="data-inicial" className='form-label'>Data inicial</label>
+                        <input type="date" className='form-control' id='data-inicial' {...register('data_inicial')} />
+                    </div>
+                    {/* Data fnial */}
+                    <div className='mb-3'>
+                        <label htmlFor="data-final" className='form-label'>Data final</label>
+                        <input type="date" className='form-control' id='data-final' {...register('data_final')} />
+                    </div>
+                </div>
+                {/* Status, data de pagamento e cancelamento */}
+                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     {/* Status */}
                     <div className='mb-3'>
                         <label htmlFor="status" className='form-label'>Status</label>
@@ -194,14 +271,6 @@ const BillForm = () => {
                             <option value="P">Pago</option>
                             <option value="C">Cancelado</option>
                         </select>
-                    </div>
-                </div>
-                {/* Datas de pagamento, cancelamento e agendamento */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    {/* Data de vencimento */}
-                    <div className='mb-3'>
-                        <label htmlFor="data-vencimento" className='form-label'>Data de vencimento</label>
-                        <input type="date" className='form-control' id='data-vencimento' {...register('data_vencimento')} />
                     </div>
                     {/* Data de pagamento */}
                     <div className='mb-3' style={{ display: `${watch('status') == 'P' ? 'block' : 'none'}` }}>
