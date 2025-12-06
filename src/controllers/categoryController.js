@@ -141,7 +141,12 @@ const create = async (req, res) => {
         }
 
         const createdCategory = await CategoryModel.create(data);
-        return res.status(201).json(createdCategory);
+
+        let category = createdCategory.toJSON();
+
+        category.descricao_visual = await recursiveDescription(createdCategory.id);
+
+        return res.status(201).json(category);
     } catch (error) {
         console.log('Erro ao criar categoria');
         console.log(error);
@@ -213,7 +218,11 @@ const update = async (req, res) => {
 
         await category.update(data);
 
-        return res.status(200).json({ message: "Atualizado com sucesso!" });
+        let categoryObj = category.toJSON();
+
+        categoryObj.descricao_visual = await recursiveDescription(category.id);
+
+        return res.status(200).json(categoryObj);
 
     } catch (error) {
         console.log('Erro ao atualizar categoria');
