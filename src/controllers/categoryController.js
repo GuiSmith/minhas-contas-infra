@@ -1,6 +1,7 @@
 // Models
 import CategoryModel from "../database/models/categoryModel.js";
 import UserModel from "../database/models/userModel.js";
+import { Op } from "sequelize";
 
 // Funções utilitárias
 const recursiveCheckCategory = async (intended_id_categoria, id_categoria) => {
@@ -28,7 +29,7 @@ const recursiveDescription = async (id_categoria) => {
     const category = await CategoryModel.findByPk(id_categoria);
     if (category) {
         if (category.id_categoria) {
-            return await recursiveDescription(category.id_categoria) + " > " + category.descricao;
+            return ((await recursiveDescription(category.id_categoria)) + " > " + category.descricao).toString();
         } else {
             return category.descricao;
         }
@@ -39,21 +40,26 @@ const recursiveDescription = async (id_categoria) => {
 
 const select = async (req, res) => {
     try {
-        const { id } = req.params.id ?? 0;
 
-        if(id === 0){
+        const { id } = req.params ?? {};
+
+        if (id === 0) {
             return res.status(400).json({ message: `ID de categoria inválido!` })
         }
 
-        const category = await CategoryModel.findByPk(id,{
+        console.log(id);
+
+        const category = await CategoryModel.findByPk(id, {
             raw: true,
         });
 
-        if(!category){
+        console.log(category);
+
+        if (!category) {
             return res.status(400).json({ message: "Categoria não encontrada!" });
         }
 
-        category.descricao = recursiveDescription(category.id);
+        category.descricao_visual = await recursiveDescription(category.id);
 
         return res.status(200).json(category);
     } catch (error) {
@@ -71,7 +77,7 @@ const list = async (req, res) => {
         });
 
         for (const category of categories) {
-            category.descricao = await recursiveDescription(category.id);
+            category.descricao_visual = await recursiveDescription(category.id);
         }
 
         return res.status(200).json(categories);
@@ -108,23 +114,36 @@ const create = async (req, res) => {
         if (typeof data.descricao !== 'string' || data.descricao.trim().length == 0 || data.descricao == '') {
             return res.status(400).json({ message: 'Descrição deve ser texto e não vazia' });
         }
+        const descriptionTaken = await CategoryModel.findOne({
+            where: {
+                descricao: data.descricao,
+                id_categoria: data.id_categoria,
+            }
+        });
+        if (descriptionTaken) {
+            return res.status(400).json({ message: "Categoria já existe" });
+        }
 
         // Define o usuário da descrição como o da requisição
         data.id_user = req.user.id;
 
-        // Categoria
-        const category = await CategoryModel.findByPk(data.id_categoria);
-        if (category) {
-            const recursiveOk = await recursiveCheckCategory(category.id, category.id_categoria);
-            if (!recursiveOk) {
-                return res.status(400).json({ message: "Recursividade de categoria detectada, escolha outra!" });
+        // Categoria pai
+        if (data.id_categoria) {
+            const category = await CategoryModel.findByPk(data.id_categoria);
+            if (category) {
+                const recursiveOk = await recursiveCheckCategory(category.id, category.id_categoria);
+                if (!recursiveOk) {
+                    return res.status(400).json({ message: "Recursividade de categoria detectada, escolha outra!" });
+                }
+            } else {
+                return res.status(400).json({ message: "Categoria pai não encontrada!" });
             }
         }
 
         const createdCategory = await CategoryModel.create(data);
         return res.status(201).json(createdCategory);
     } catch (error) {
-        console.log('Erro ao listar categorias');
+        console.log('Erro ao criar categoria');
         console.log(error);
         return res.status(500).json({ message: 'Erro ao criar categoria. Contate o suporte!' });
     }
@@ -134,8 +153,10 @@ const update = async (req, res) => {
     try {
         const permittedColumns = ['descricao', 'id_categoria'];
 
+        console.log(req.params);
+
         // ID Params
-        const id = req.params.id ?? null;
+        const { id } = req.params ?? {};
         if (!id) {
             return res.status(400).json({ message: "Informe o ID de categoria nos params para continuar! " });
         }
@@ -153,15 +174,31 @@ const update = async (req, res) => {
             }
         }
 
+        // Existing category
+        const category = await CategoryModel.findByPk(id);
+        if (!category) {
+            return res.status(400).json({ message: "Categoria não encontrada" });
+        }
+
         // Description
         if (data.hasOwnProperty('descricao')) {
             if (typeof data.descricao !== 'string' || data.descricao.trim().length == 0 || data.descricao == '') {
                 return res.status(400).json({ message: 'Descrição deve ser texto e não vazia' });
             }
+            const descriptionTaken = await CategoryModel.findOne({
+                where: {
+                    descricao: data.descricao,
+                    id_categoria: data.id_categoria,
+                    id: { [Op.ne]: id }
+                }
+            });
+            if (descriptionTaken) {
+                return res.status(400).json({ message: "Categoria já existe" });
+            }
         }
 
         // Category
-        if (data.hasOwnProperty('id_categoria')) {
+        if (data.id_categoria) {
             // Checking recursive status
             const relatedCategory = await CategoryModel.findByPk(data.id_categoria);
             if (relatedCategory) {
@@ -172,12 +209,6 @@ const update = async (req, res) => {
             } else {
                 return res.status(400).json({ message: "Categoria pai não encontrada!" });
             }
-        }
-
-        // Existing category
-        const category = await CategoryModel.findByPk(id);
-        if (!category) {
-            return res.status(400).json({ message: "Categoria não encontrada" });
         }
 
         await category.update(data);
@@ -191,4 +222,27 @@ const update = async (req, res) => {
     }
 };
 
-export default { select, list, create, update };
+const remove = async (req, res) => {
+    try {
+        // ID Params
+        const { id } = req.params ?? {};
+        if (!id) {
+            return res.status(400).json({ message: "Informe o ID de categoria nos params para continuar! " });
+        }
+
+        const category = await CategoryModel.findByPk(id);
+        if(!category){
+            return res.status(400).json({ message: "Categoria não encontrada!" });
+        }
+
+        await category.destroy();
+
+        return res.status(200).json({ message: "Categoria deletada!" });
+    } catch (error) {
+        console.debug('Erro ao deletar categoria');
+        console.error(error);
+        return res.status(400).json('Erro interno. Contate o suporte');
+    }
+}
+
+export default { select, list, create, update, remove };
