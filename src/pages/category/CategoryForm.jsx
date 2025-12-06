@@ -121,6 +121,7 @@ const CategoryForm = () => {
     const handleNew = async () => {
         navigate('/category/form');
         reset({ ...defaultValues });
+        setCategory({});
     }
 
     // Criar
@@ -145,6 +146,9 @@ const CategoryForm = () => {
         if (res.ok) {
             toast.success('Categoria criada!');
             reset({ descricao: resData.descricao, id_categoria: resData.id_categoria });
+            // Adicionar categoria ao estado
+            console.log(resData);
+            setCategories([...categories, resData]);
         } else {
             toast.warning(resData.message);
         }
@@ -173,6 +177,8 @@ const CategoryForm = () => {
 
         if (res.ok) {
             toast.success('Atualização realizada!');
+            // Atualizar categoria no estado
+            setCategories(categories.map(cat => cat.id === category.id ? resData : cat));
         } else {
             toast.warning(resData.message);
         }
@@ -228,7 +234,7 @@ const CategoryForm = () => {
                 {/* Botões */}
                 <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
                     <button type='button' disabled={isLoading} onClick={handleNew} className={'btn btn-primary'} >Novo</button>
-                    <button type='submit' disabled={isLoading} className='btn btn-success'>Salvar</button>
+                    <button type='submit' disabled={isLoading} className='btn btn-success'>{Object.keys(category).length > 0 ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
                 {/* Descrição */}
                 <div className='mb-3'>
