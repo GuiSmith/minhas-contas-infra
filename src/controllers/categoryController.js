@@ -49,7 +49,11 @@ const select = async (req, res) => {
 
         console.log(id);
 
-        const category = await CategoryModel.findByPk(id, {
+        const category = await CategoryModel.findOne({
+            where: {
+                id,
+                id_user: req.user.id,
+            }, 
             raw: true,
         });
 
@@ -117,7 +121,7 @@ const create = async (req, res) => {
         const descriptionTaken = await CategoryModel.findOne({
             where: {
                 descricao: data.descricao,
-                id_categoria: data.id_categoria,
+                id_categoria: (data.id_categoria ?? null),
             }
         });
         if (descriptionTaken) {
@@ -193,7 +197,7 @@ const update = async (req, res) => {
             const descriptionTaken = await CategoryModel.findOne({
                 where: {
                     descricao: data.descricao,
-                    id_categoria: data.id_categoria,
+                    id_categoria: (data.id_categoria ?? null),
                     id: { [Op.ne]: id }
                 }
             });
