@@ -13,6 +13,7 @@ import database from './src/database/database.js';
 // Rotas
 import userRoutes from './src/routes/userRoutes.js';
 import categoryRoutes from './src/routes/categoryRoutes.js';
+import billRoutes from './src/routes/billRoutes.js';
 
 const PORT = process.env.BACK_PORT;
 
@@ -37,6 +38,7 @@ app.get('/auth', (req, res, next) => res.status(200).json({ message: 'Autorizado
 
 app.use('/user', userRoutes);
 app.use('/category', categoryRoutes);
+app.use('/bill', billRoutes);
 
 app.listen(
     PORT,
