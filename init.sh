@@ -18,18 +18,6 @@ export $(grep -v '^#' "$SPECIFIC_ENV" | xargs)
 echo "Ambiente: $MODE"
 echo "Banco: $MYSQL_DATABASE"
 
-mariadb --version >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-    apt update
-    apt install mariadb-client -y
-fi
-
-TABLE_COUNT=$(mariadb -h "$DB_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -N -e "
-    SELECT COUNT(*) 
-    FROM information_schema.tables 
-    WHERE table_schema = '$MYSQL_DATABASE';
-")
-
 RUN_MIGRATION=false
 
 if [ "$MODE" = "prod" ]; then
