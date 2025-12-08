@@ -1,7 +1,11 @@
+volumes:
+  vol_mariadb:
 services:
   db-dev:
     image: mariadb:11.4
     restart: always
+    volumes:
+      - vol_mariadb:/var/lib/mysql
     env_file:
       - .env
       - .env.dev
@@ -33,4 +37,4 @@ services:
       - .env.dev
     ports:
       - ${BACK_PORT}:${BACK_PORT}
-    command: bash -c "npm i && bash init.sh dev"
+    command: npm run dev
