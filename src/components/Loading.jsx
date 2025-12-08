@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Loading = () => (
     <div style={{position: 'fixed', bottom: '1em', left: '1em'}}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
