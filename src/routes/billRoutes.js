@@ -4,6 +4,7 @@ import billController from '../controllers/billController.js';
 const router = express.Router();
 
 router.get('/:id', billController.select);
+router.put('/:id', billController.update);
 router.post('/', billController.create);
 
 export default router;

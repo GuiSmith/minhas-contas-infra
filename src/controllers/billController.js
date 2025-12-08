@@ -66,6 +66,21 @@ const create = async (req, res) => {
             return res.status(400).json({ message: 'Categoria não encontrada' });
         }
 
+        // Descrição não pode ser vazia
+        if(!data.descricao || data.descricao.trim() === '') {
+            return res.status(400).json({ message: 'Descrição inválida' });
+        } else {
+            data.descricao = data.descricao.trim();
+        }
+
+        // Descrição única por categoria
+        const existingBill = await BillModel.findOne({
+            where: { descricao: data.descricao, id_categoria: data.id_categoria, id_user: data.id_user }
+        });
+        if (existingBill) {
+            return res.status(400).json({ message: 'Já existe uma conta com essa descrição nessa categoria' });
+        }
+
         // Recorrência
         if (!BillModel.getAttributes().tipo_recorrencia.type.values.includes(data.tipo_recorrencia)) {
             return res.status(400).json({ message: "Tipo de recorrência inválida" });
@@ -98,4 +113,91 @@ const create = async (req, res) => {
     }
 };
 
-export default { select, create };
+const update = async (req, res) => {
+    try {
+        const { id } = req.params ?? {};
+
+        const body = req.body ?? {};
+
+        if(!id){
+            return res.status(400).json({ message: 'Informe o ID para continuar' });
+        }
+
+        // Ver se conta existe mesmo
+        const existingBill = await BillModel.findOne({
+            where: { id, id_user: req.user.id }
+        });
+        if (!existingBill) {
+            return res.status(400).json({ message: 'Conta não encontrada' });
+        }
+
+        // Descrição única por categoria
+        const  = await BillModel.findOne({
+            where: { descricao: data.descricao, id_categoria: data.id_categoria, id_user: data.id_user }
+        });
+        if (existingBill) {
+            return res.status(400).json({ message: 'Já existe uma conta com essa descrição nessa categoria' });
+        }
+
+        // Colunas permitidas
+        const permittedColumns = ['descricao', 'id_categoria', 'valor_base', 'tipo_recorrencia', 'mes_inicial', 'dia_fixo', 'ativo', 'observacoes'];
+        
+        // Rejeitar chaves desnecessárias
+        for (const key of Object.keys(body)) {
+            if (!permittedColumns.includes(key)) {
+                return res.status(400).json({ message: `Dado desnecessário informado: ${key}` });
+            }
+        }
+
+        const data = body;
+
+        // Coerção de tipos
+        if(data.valor_base){
+            data.valor_base = parseNumber(body.valor_base);
+
+            if (data.valor_base === null || data.valor_base <= 0) {
+                return res.status(400).json({ message: 'Valor inválido' });
+            }
+        }
+
+        // Categoria
+        if(data.id_categoria){
+            const category = await CategoryModel.findOne({
+                where: { id: data.id_categoria, id_user: req.user.id }
+            });
+            if (!category) {
+                return res.status(400).json({ message: 'Categoria não encontrada' });
+            }
+        }
+
+        // Recorrência
+        if(data.tipo_recorrencia){
+            if (!BillModel.getAttributes().tipo_recorrencia.type.values.includes(data.tipo_recorrencia)) {
+                return res.status(400).json({ message: "Tipo de recorrência inválida" });
+            }
+        }
+
+        // Dia fixo
+        if(data.dia_fixo){
+            if (data.dia_fixo < 0 || data.dia_fixo > 25) {
+                return res.status(400).json({ message: "Dia fixo deve ser entre 1 e 25" });
+            }
+        }
+
+        // Ativo
+        if (data.ativo) {
+            if(BillModel.getAttributes().ativo.type.values.includes(data.ativo) === false){
+                return res.status(400).json('Status inválido');
+            }
+        }
+
+        await existingBill.update(data);
+
+        return res.status(200).json({ message: 'Conta atualizada com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar conta', error);
+        return res.status(500).json({ message: 'Erro desconhecido. Contate o suporte!' });
+    }
+}
+
+export default { select, create, update };
