@@ -89,7 +89,7 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
     try {
         // Limpa o cookie
-        res.clearCookie('token', {
+        res.clearCookie('session', {
             httpOnly: true,
             secure: false,
             sameSite: "lax",
