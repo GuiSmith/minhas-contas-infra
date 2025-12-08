@@ -4,13 +4,12 @@ import { useState, useEffect } from 'react';
 
 // UI
 import { ToastContainer, toast } from 'react-toastify';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useParams, useNavigate } from 'react-router-dom';
 
 // Services
 import { apiUrl, apiOptions } from '@services/API';
 
 // Personalized UI
-import ToastConfirm from '@ui/ToastConfirm';
 import Loading from '@components/Loading';
 
 // Styles
@@ -18,10 +17,25 @@ import '@styles/form.css';
 
 const BillForm = () => {
 
-    const { register, handleSubmit, watch } = useForm();
+    const { register, handleSubmit, watch, reset } = useForm();
     const [isLoading, setIsLoading] = useState(false);
     const [isWaitingResponse, setIsWaitingResponse] = useState(false);
     const [categories, setCategories] = useState([]);
+    const [bill, setBill] = useState({});
+
+    const location = useLocation();
+    const params = useParams();
+    const navigate = useNavigate();
+
+    const defaultValues = {
+        descricao: '',
+        id_categoria: '',
+        valor_base: '',
+        tipo_recorrencia: 'M',
+        dia_fixo: '',
+        mes_inicial: '',
+        observacoes: ''
+    };
 
     // Listar categorias
     useEffect(() => {
@@ -57,10 +71,49 @@ const BillForm = () => {
         getCategories();
     }, []);
 
+    // Selecionar Conta
+    useEffect(() => {
+        if (!params.id) return;
+
+        const fetchBill = async () => {
+            try {
+
+                setIsLoading(true);
+
+                const endpoint = `bill/${params.id}`;
+                const completeUrl = `${apiUrl}${endpoint}`;
+
+                const res = await fetch(completeUrl, apiOptions('GET'));
+                const resData = await res.json();
+
+                if (!res.ok) {
+                    toast.warning(resData.message);
+                    return;
+                }
+
+                setBill({ ...resData });
+
+                const newFormObj = {};
+                for (const key in resData) {
+                    if (Object.keys(defaultValues).includes(key)) {
+                        newFormObj[key] = resData[key];
+                    }
+                }
+                reset({ ...newFormObj });
+            } catch (error) {
+                toast.error('Erro ao selecionar conta');
+                console.error(error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBill();
+    }, [location.pathname]);
+
     // Validações
     const validations = async (data) => {
         try {
-            console.log('Inicial: ', data);
 
             // Categoria não pode estar vazia
             if (!(data.id_categoria > 0)) {
@@ -68,67 +121,24 @@ const BillForm = () => {
                 return false;
             }
 
-            // Valor não pode ser negativo ou vazio
-            if (!(data.valor > 0)) {
-                toast.warning('Valor precisa ser maior que 0!');
+            // valor_base não pode ser negativo ou vazio
+            if (!(data.valor_base > 0)) {
+                toast.warning('valor base precisa ser maior que 0!');
                 return false;
             }
 
-            // Data de vencimento não pode estar vazia
-            if (!data.data_vencimento) {
-                toast.warning('Preencha data de vencimento!');
+            // Mês de início
+            if (!data.mes_inicial) {
+                toast.warning('Preencha mês de início');
                 return false;
             }
 
-            // Acréscimos não podem ser negativos
-            if (data.acrescimo < 0) {
-                toast.warning('Acréscimos não podem ser negativos!');
+            // Dia fixo
+            if (!data.dia_fixo) {
+                toast.warning('Preencha dia fixo!');
                 return false;
             }
 
-            // Descontos não podem ser negativos
-            if (data.desconto < 0) {
-                toast.warning('Descontos não podem ser negativos!');
-                return false;
-            }
-
-            // Se status for cancelado, uma data de cancelamento deve ser especificada
-            if (data.status == 'C') {
-                if (!data.data_cancelamento) {
-                    toast.warning('Preencha a data de cancelamento!');
-                    return false;
-                }
-            } else {
-                data.data_cancelamento = '';
-            }
-
-            // Se status for pago, uma data de pagamento deve ser especificada
-            if (data.status == 'P') {
-                if (!data.data_pagamento) {
-                    toast.warning('Preencha a data de pagamento!');
-                    return false;
-                }
-            } else {
-                data.data_pagamento = '';
-            }
-
-            // Perguntar se status deve ser atualizado na data agendada
-            if (['P','T'].includes(data.forma_pagamento)) {
-
-                setIsWaitingResponse(true);
-                await ToastConfirm({
-                    question: 'Atualizar status na data agendada?',
-                    onConfirm: () => {
-                        data.atualizar_status_na_data = true;
-                    },
-                    onCancel: () => {
-                        data.atualizar_status_na_data = false;
-                    }
-                });
-                setIsWaitingResponse(false);
-            }
-
-            console.log('Final: ', data);
             return true;
         } catch (error) {
             toast.error('Erro ao realizar validações. Contate o suporte!');
@@ -137,6 +147,43 @@ const BillForm = () => {
             return false;
         }
     };
+
+    const handleNewButton = () => {
+        setIsLoading(true);
+        navigate('/bill/form');
+        reset({ ...defaultValues });
+        setBill({});
+        setIsLoading(false);
+    };
+
+    const create = async (data) => {
+        try {
+            setIsLoading(true);
+
+            const endpoint = 'bill';
+            const completeUrl = `${apiUrl}${endpoint}`;
+
+            const res = await fetch(completeUrl, apiOptions('POST', data));
+            console.table(res);
+            const resData = await res.json();
+            console.table(resData);
+
+            if (res.ok) {
+                toast.success('Conta cadastrada!');
+                navigate(`/bill/form/${resData.id}`);
+            } else {
+                toast.warning(resData.message);
+            }
+        } catch (error) {
+            toast.error('Erro ao criar categoria, contate o suporte!');
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const update = async (data) => {
+
+    }
 
     const onSubmit = async (data) => {
         try {
@@ -152,7 +199,12 @@ const BillForm = () => {
                 return;
             }
 
-            toast.success('OK!');
+            if (Object.keys(bill).length > 0) {
+                await update(data);
+            } else {
+                await create(data);
+            }
+
         } catch (error) {
             toast.error('Erro ao salvar conta. Contate o suporte!');
             console.log('Erro ao salvar conta');
@@ -162,28 +214,23 @@ const BillForm = () => {
         }
     }
 
-    const handleDelete = async () => {
-        toast.warning('Ainda não implementado');
-    };
-
     return (
         <article>
             {/* Título */}
             <div className='text-center'>
-                <h1 className='fw-bold'>Conta a pagar</h1>
-                <p>Cadastre sua conta a pagar</p>
+                <h1 className='fw-bold'>Contas recorrentes</h1>
+                <p>Gerencia sua contas recorrentes</p>
             </div>
             {/* Formulário */}
             <form action="#" className='card shadow-sm p-3' onSubmit={handleSubmit(onSubmit)} >
                 {/* Botões */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    <NavLink to='/bill/form' className={'btn btn-primary'} >Novo</NavLink>
+                <div className='form-line'>
+                    <button type='button' onClick={handleNewButton} className='btn btn-primary' >Novo</button>
                     <button type='submit' disabled={isWaitingResponse || isLoading} className='btn btn-success'>Salvar</button>
                     <NavLink to='/bill/list' className={'btn btn-dark'} >Listar</NavLink>
-                    <button type='button' disabled={isWaitingResponse || isLoading} className='btn btn-danger' onClick={handleDelete}>Deletar</button>
                 </div>
                 {/* Descrição e Categoria */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
+                <div className='form-line'>
                     {/* Descrição */}
                     <div className='mb-3'>
                         <label htmlFor="descricao" className='form-label'>Descrição</label>
@@ -200,93 +247,50 @@ const BillForm = () => {
                         </select>
                     </div>
                 </div>
-                {/* Valor e Forma de pagamento */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    {/* Valor */}
+                {/* Valor base e Ativo */}
+                <div className='form-line'>
+                    {/* valor_base */}
                     <div className='mb-3'>
-                        <label htmlFor="valor" className='form-label'>Valor</label>
-                        <input type="tel" step='0.01' min='0' className='form-control' id='valor' {...register('valor')} placeholder='R$ 0,00' />
+                        <label htmlFor="valor_base" className='form-label'>Valor base</label>
+                        <input type="tel" step='0.01' min='0' className='form-control' id='valor_base' {...register('valor_base')} placeholder='R$ 0,00' />
                     </div>
-                    {/* Forma de pagamento */}
+                    {/* Ativo */}
                     <div className='mb-3'>
-                        <label htmlFor="forma-pagamento" className='form-label'>Forma de pagamento</label>
-                        <select id="forma-pagamento" className='form-select' {...register('forma_pagamento')}>
-                            <option value="P">Pix</option>
-                            <option value="B">Boleto</option>
-                            <option value="D">Dinheiro</option>
-                            <option value="T">Transferência</option>
+                        <label htmlFor="ativo" className='form-label'>Ativo</label>
+                        <select id="ativo" className='form-select' {...register('ativo')}>
+                            <option value="S">Sim</option>
+                            <option value="N">Não</option>
                         </select>
                     </div>
                 </div>
-                {/* Acréscimos e descontos */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    {/* Acréscimos */}
-                    <div className='mb-3'>
-                        <label htmlFor="acrescimo" className='form-label'>Acréscimo</label>
-                        <input type="tel" className='form-control' id='acrescimo' placeholder='R$ 0,00' {...register('acrescimo')} />
-                    </div>
-                    {/* Desconto */}
-                    <div className='mb-3'>
-                        <label htmlFor="desconto" className='form-label'>Desconto</label>
-                        <input type="number" className='form-control' id='desconto' placeholder='R$ 0,00' {...register('desconto')} />
-                    </div>
-                </div>
-                {/* Recorrência e data de vencimento */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
+                {/* Recorrência, Dia fixo e Mês de início */}
+                <div className='form-line'>
                     {/* Recorrência */}
                     <div className='mb-3'>
                         <label htmlFor="recorrencia" className='form-label'>Recorrência</label>
-                        <select id='recorrencia' className='form-select' {...register('recorrencia')} >
-                            <option value="U">Única</option>
+                        <select id='recorrencia' className='form-select small' {...register('tipo_recorrencia')} >
                             <option value="M">Mensal</option>
                             <option value="A">Anual</option>
                         </select>
                     </div>
-                    {/* Data de vencimento */}
+                    {/* Dia fixo */}
                     <div className='mb-3'>
-                        <label htmlFor="data-vencimento" className='form-label'>Data de vencimento</label>
-                        <input type="date" className='form-control' id='data-vencimento' {...register('data_vencimento')} />
+                        <label htmlFor="dia-fixo" className='form-label'>Dia fixo</label>
+                        <input type="tel" className='form-control small' id='dia-fixo' {...register('dia_fixo')} />
                     </div>
-                </div>
-                {/* Data inicial e fim da recorrência */}
-                <div className={`'mb-3 ${watch('recorrencia') === 'U' ? 'd-none' : 'd-flex flex-wrap'} justify-content-start gap-3`}>
-                    {/* Data inicial */}
+                    {/* Mês de início */}
                     <div className='mb-3'>
-                        <label htmlFor="data-inicial" className='form-label'>Data inicial</label>
-                        <input type="date" className='form-control' id='data-inicial' {...register('data_inicial')} />
-                    </div>
-                    {/* Data fnial */}
-                    <div className='mb-3'>
-                        <label htmlFor="data-final" className='form-label'>Data final</label>
-                        <input type="date" className='form-control' id='data-final' {...register('data_final')} />
-                    </div>
-                </div>
-                {/* Status, data de pagamento e cancelamento */}
-                <div className='mb-3 d-flex flex-wrap justify-content-start gap-3'>
-                    {/* Status */}
-                    <div className='mb-3'>
-                        <label htmlFor="status" className='form-label'>Status</label>
-                        <select id='status' className='form-select' {...register('status')} >
-                            <option value="A">Aberto</option>
-                            <option value="P">Pago</option>
-                            <option value="C">Cancelado</option>
-                        </select>
-                    </div>
-                    {/* Data de pagamento */}
-                    <div className='mb-3' style={{ display: `${watch('status') == 'P' ? 'block' : 'none'}` }}>
-                        <label htmlFor="data-pagamento" className='form-label'>Data de Pagamento</label>
-                        <input type="date" className='form-control' id='data-pagamento' {...register('data_pagamento')} />
-                    </div>
-                    {/* Data de cancelamento */}
-                    <div className='mb-3' style={{ display: `${watch('status') == 'C' ? 'block' : 'none'}` }}>
-                        <label htmlFor="data-cancelamento" className='form-label'>Data de Cancelamento</label>
-                        <input type="date" className='form-control' id='data-cancelamento' {...register('data_cancelamento')} />
+                        <label htmlFor="data-inicio" className='form-label'>
+                            Data de Início
+                        </label>
+                        <input type="date" className='form-control' id='data-inicio' {...register('mes_inicial')} />
+                        <small className='ms-2 text-muted'>Usaremos apenas mês e ano</small>
                     </div>
                 </div>
                 {/* Observações */}
                 <div className='mb-3'>
-                    <label htmlFor="notes" className='form-label'>Observações</label>
-                    <textarea id='notes' className='form-control' placeholder='Ex: pagar só depois do dia 10' {...register('notes')}></textarea>
+                    <label htmlFor="observacoes" className='form-label'>Observações</label>
+                    <textarea id='observacoes' className='form-control' placeholder='Ex: pagar só depois do dia 10' {...register('observacoes')}></textarea>
                 </div>
             </form>
             <ToastContainer position='bottom-right' />
