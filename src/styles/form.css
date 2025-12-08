@@ -11,6 +11,18 @@ input.form-control, select.form-select {
     width: 15em;
 }
 
+input.form-control.small, select.form-select.small {
+    width: 7em !important;
+}
+
 .form-check-label, .form-check-input, .form-control[type=date], select.form-control {
     cursor: pointer;
+}
+
+.form-line {
+    margin-bottom: 1rem !important;
+    gap: 1rem !important;
+    display: flex;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
 }
