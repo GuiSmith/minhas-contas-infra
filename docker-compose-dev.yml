@@ -17,13 +17,14 @@ services:
       retries: 5
   frontend-dev:
     image: node:latest
+    working_dir: /frontend
     env_file:
       - .env.dev
     volumes:
       - ./frontend:/frontend
     ports:
       - 5173:5173
-    command: bash -c "cd /frontend && npm i && npm run dev -- --host"
+    command: bash -c "npm i && npm run dev -- --host"
   backend-dev:
     image: node:latest
     working_dir: /backend
@@ -37,4 +38,4 @@ services:
       - .env.dev
     ports:
       - ${BACK_PORT}:${BACK_PORT}
-    command: npm run dev
+    command: bash -c "npm i && npm run dev"
