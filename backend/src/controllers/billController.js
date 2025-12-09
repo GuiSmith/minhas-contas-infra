@@ -132,10 +132,10 @@ const update = async (req, res) => {
         }
 
         // Descrição única por categoria
-        const  = await BillModel.findOne({
+        const duplicateDescriptionBill = await BillModel.findOne({
             where: { descricao: data.descricao, id_categoria: data.id_categoria, id_user: data.id_user }
         });
-        if (existingBill) {
+        if (duplicateDescriptionBill) {
             return res.status(400).json({ message: 'Já existe uma conta com essa descrição nessa categoria' });
         }
 
