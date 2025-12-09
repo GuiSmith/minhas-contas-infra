@@ -1,5 +1,3 @@
-frontend/
-backend/
 .env
 .env.dev
 .env.prod
