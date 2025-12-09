@@ -47,15 +47,15 @@ const PaymentModel = database.define('pagamento', {
     }
 });
 
-BillModel.associate = (models) => {
-    BillModel.belongsTo(models.contas_recorrentes, {
+PaymentModel.associate = (models) => {
+    PaymentModel.belongsTo(models.contas_recorrentes, {
         foreignKey: {
             name: 'id_conta',
             allowNull: false,
         }
     });
 
-    BillModel.belongsTo(models.user, {
+    PaymentModel.belongsTo(models.user, {
         foreignKey: {
             name: 'id_user',
             allowNull: false,
